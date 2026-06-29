@@ -1,319 +1,55 @@
-/* ═══════════════════════════════════════════════
-   CINEMATIC HAND TRACKING — Fixed blur + tracking
-   ═══════════════════════════════════════════════ */
-
-const video          = document.getElementById('video');
-const canvas         = document.getElementById('canvas');
-const particleCanvas = document.getElementById('particleCanvas');
-const container      = document.getElementById('cameraContainer');
-const blurOverlay    = document.getElementById('blurOverlay');
-const vignette       = document.getElementById('vignette');
-const hud            = document.getElementById('hud');
-const hudLabel       = document.getElementById('hudLabel');
-const hudSub         = document.getElementById('hudSub');
-const barTop         = document.getElementById('barTop');
-const barBottom      = document.getElementById('barBottom');
-const ctx            = canvas.getContext('2d');
-const pCtx           = particleCanvas.getContext('2d');
-
-// ── State ────────────────────────────────────────
-let vSignFrames   = 0;
-let lostFrames    = 0;
-let isActive      = false;
-let cinemaMode    = false;
-let cinemaTimer   = null;
-
-// Animated values
-let currentBlur       = 0;
-let targetBlur        = 0;
-let currentScale      = 1;
-let targetScale       = 1;
-let currentContrast   = 1;
-let targetContrast    = 1;
-let currentSaturate   = 1;
-let targetSaturate    = 1;
-let currentBrightness = 1;
-let targetBrightness  = 1;
-let currentVignette   = 0;
-let targetVignette    = 0;
-
-// Focus phases
-let focusPhase     = 'idle';
-let focusHuntStart = 0;
-
-// Particles
-const PARTICLE_COUNT = 38;
-let particles        = [];
-let particlesVisible = false;
-
-// ── Camera ───────────────────────────────────────
-async function startCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-}
-startCamera();
-
-// ── MediaPipe ────────────────────────────────────
-const hands = new Hands({
-  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
-});
-hands.setOptions({
-  maxNumHands: 2,
-  modelComplexity: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.7
-});
-hands.onResults(onResults);
-
-const camera = new Camera(video, {
-  onFrame: async () => { await hands.send({ image: video }); },
-  width: 1280,
-  height: 720
-});
-camera.start();
-
-// ── V-sign detection ─────────────────────────────
-function isVSign(lm) {
-  const indexUp  = lm[8].y  < lm[6].y;
-  const middleUp = lm[12].y < lm[10].y;
-  const ringDown = lm[16].y > lm[14].y;
-  const pinkyDown= lm[20].y > lm[18].y;
-  return indexUp && middleUp && ringDown && pinkyDown;
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
 }
 
-// ── Mirror landmarks for mirrored video ──────────
-// Video is CSS scaleX(-1). MediaPipe coords are NOT mirrored.
-// We flip X so landmarks sit on the correct hand position visually.
-function mirrorLandmarks(landmarks, width) {
-  return landmarks.map(lm => ({
-    x: 1 - lm.x,   // flip X in normalized space
-    y: lm.y,
-    z: lm.z
-  }));
+body{
+
+    background:#000;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+
 }
 
-// ── Results ──────────────────────────────────────
-function onResults(results) {
-  const W = video.videoWidth  || 1280;
-  const H = video.videoHeight || 720;
-  canvas.width  = W;
-  canvas.height = H;
-  ctx.clearRect(0, 0, W, H);
+.camera-container{
 
-  let vDetected = false;
+    position:relative;
+    width:900px;
+    aspect-ratio:16/9;
 
-  if (results.multiHandLandmarks) {
-    for (const rawLandmarks of results.multiHandLandmarks) {
-      // Mirror landmarks to match CSS-mirrored video
-      const landmarks = mirrorLandmarks(rawLandmarks, W);
-
-      drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: '#ffffff', lineWidth: 2 });
-      drawLandmarks(ctx, landmarks, { color: '#00ffff', fillColor: '#ffffff', radius: 5 });
-
-      if (isVSign(rawLandmarks)) vDetected = true;
-    }
-  }
-
-  if (vDetected) { vSignFrames++; lostFrames = 0; }
-  else           { lostFrames++;  vSignFrames = 0; }
-
-  if (!isActive && vSignFrames >= 5) activateCinematic();
-  if (isActive  && lostFrames  >= 5) deactivateCinematic();
-
-  if (isActive && !cinemaMode && !cinemaTimer) {
-    cinemaTimer = setTimeout(() => { if (isActive) enterCinemaMode(); }, 2000);
-  }
 }
 
-// ── Activate / Deactivate ────────────────────────
-function activateCinematic() {
-  if (isActive) return;
-  isActive       = true;
-  focusPhase     = 'hunting';
-  focusHuntStart = performance.now();
+video{
 
-  targetScale      = 1.03;
-  targetContrast   = 1.12;
-  targetSaturate   = 1.14;
-  targetBrightness = 0.93;
-  targetVignette   = 1;
+    width:100%;
+    height:100%;
 
-  barTop.classList.add('active');
-  barBottom.classList.add('active');
+    object-fit:cover;
 
-  setTimeout(() => {
-    hud.classList.add('active');
-    particleCanvas.classList.add('active');
-    particlesVisible = true;
-  }, 350);
+    border-radius:20px;
+
+    transform:scaleX(-1);
+
+    filter: blur(0px);
+    transition: filter 0.3s ease;
+    will-change: filter;
+
 }
 
-function deactivateCinematic() {
-  if (!isActive) return;
-  isActive   = false;
-  cinemaMode = false;
-  focusPhase = 'releasing';
+canvas{
 
-  clearTimeout(cinemaTimer);
-  cinemaTimer = null;
+    position:absolute;
 
-  targetBlur       = 0;
-  targetScale      = 1;
-  targetContrast   = 1;
-  targetSaturate   = 1;
-  targetBrightness = 1;
-  targetVignette   = 0;
+    inset:0;
 
-  hud.classList.remove('active');
-  barTop.classList.remove('active');
-  barBottom.classList.remove('active');
-  particleCanvas.classList.remove('active');
-  particlesVisible = false;
+    width:100%;
+    height:100%;
 
-  hudLabel.textContent = 'FOCUS MODE';
-  hudSub.textContent   = 'DEPTH OF FIELD ACTIVE';
+    pointer-events:none;
+
+    transform: scaleX(-1);
+
 }
-
-function enterCinemaMode() {
-  cinemaMode       = true;
-  targetBlur       = 18;
-  targetScale      = 1.05;
-  targetContrast   = 1.22;
-  targetSaturate   = 1.18;
-  targetBrightness = 0.88;
-
-  hudLabel.textContent = 'CINEMA MODE ACTIVE';
-  hudSub.textContent   = 'CINEMATIC DEPTH ENGAGED';
-}
-
-// ── Lerp ─────────────────────────────────────────
-function lerp(a, b, t) { return a + (b - a) * t; }
-
-// ── Focus hunt ───────────────────────────────────
-function updateFocusHunt(now) {
-  if (focusPhase === 'hunting') {
-    const elapsed = now - focusHuntStart;
-    if (elapsed < 600) {
-      const t = elapsed / 600;
-      targetBlur = Math.sin(t * Math.PI * 3) * 3 + 3; // oscillate 0–6
-    } else {
-      focusPhase     = 'locking';
-      focusHuntStart = now;
-    }
-  } else if (focusPhase === 'locking') {
-    const elapsed = now - focusHuntStart;
-    if (elapsed < 700) {
-      const t    = elapsed / 700;
-      const ease = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
-      targetBlur = lerp(3, cinemaMode ? 18 : 12, ease);
-    } else {
-      focusPhase = 'active';
-      targetBlur = cinemaMode ? 18 : 12;
-    }
-  } else if (focusPhase === 'releasing') {
-    if (currentBlur < 0.15) { focusPhase = 'idle'; }
-  }
-}
-
-// ── Focus breathing ───────────────────────────────
-function getFocusBreath(now) {
-  if (!isActive || focusPhase !== 'active') return 0;
-  return Math.sin(now / 2200) * 0.005;
-}
-
-// ── Apply visual effects ─────────────────────────
-function applyEffects() {
-  // --- BLUR: use backdrop-filter on the overlay div ---
-  // This blurs the video (and everything behind the overlay)
-  const bVal = currentBlur.toFixed(2);
-  blurOverlay.style.backdropFilter         = `blur(${bVal}px)`;
-  blurOverlay.style.webkitBackdropFilter   = `blur(${bVal}px)`;
-
-  // Color grade applied to the overlay via a tinted background
-  // We use a very transparent colored overlay to simulate grading
-  // contrast/saturate/brightness applied to video element directly (no transition — JS drives it)
-  video.style.filter = `contrast(${currentContrast.toFixed(3)}) saturate(${currentSaturate.toFixed(3)}) brightness(${currentBrightness.toFixed(3)})`;
-
-  // Vignette opacity
-  vignette.style.opacity = (currentVignette * (cinemaMode ? 0.30 : 0.15)).toFixed(3);
-
-  // Container scale (zoom + breathing)
-  container.style.transform = `scale(${currentScale.toFixed(5)})`;
-}
-
-// ── Particles ─────────────────────────────────────
-function createParticle(w, h) {
-  return {
-    x:     Math.random() * w,
-    y:     h + Math.random() * 20,
-    vx:    (Math.random() - 0.5) * 0.5,
-    vy:    -(Math.random() * 0.6 + 0.15),
-    size:  Math.random() * 2.5 + 0.5,
-    alpha: Math.random() * 0.6 + 0.2,
-    life:  Math.random() * 0.5 + 0.5,
-    decay: Math.random() * 0.003 + 0.001,
-    hue:   Math.random() * 40 + 185
-  };
-}
-
-function initParticles(w, h) {
-  particles = Array.from({ length: PARTICLE_COUNT }, () => {
-    const p = createParticle(w, h);
-    p.y = Math.random() * h; // start spread
-    return p;
-  });
-}
-
-function updateParticles(w, h) {
-  pCtx.clearRect(0, 0, w, h);
-  if (!particlesVisible) return;
-
-  for (const p of particles) {
-    p.x    += p.vx;
-    p.y    += p.vy;
-    p.life -= p.decay;
-
-    if (p.life <= 0 || p.y < -10) {
-      Object.assign(p, createParticle(w, h));
-    }
-
-    const a = Math.max(0, p.life) * p.alpha;
-    pCtx.save();
-    pCtx.globalAlpha = a;
-    const g = pCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
-    g.addColorStop(0, `hsla(${p.hue}, 100%, 80%, 1)`);
-    g.addColorStop(1, `hsla(${p.hue}, 100%, 60%, 0)`);
-    pCtx.fillStyle = g;
-    pCtx.beginPath();
-    pCtx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
-    pCtx.fill();
-    pCtx.restore();
-  }
-}
-
-// ── Render loop ───────────────────────────────────
-const LERP_T = 0.05;
-
-function renderLoop(now) {
-  updateFocusHunt(now);
-
-  const breath = getFocusBreath(now);
-
-  currentBlur       = lerp(currentBlur,       targetBlur,              LERP_T);
-  currentScale      = lerp(currentScale,       targetScale + breath,    LERP_T);
-  currentContrast   = lerp(currentContrast,    targetContrast,          LERP_T);
-  currentSaturate   = lerp(currentSaturate,    targetSaturate,          LERP_T);
-  currentBrightness = lerp(currentBrightness,  targetBrightness,        LERP_T);
-  currentVignette   = lerp(currentVignette,    targetVignette,          LERP_T);
-
-  applyEffects();
-
-  const pw = particleCanvas.width  = canvas.width  || 1280;
-  const ph = particleCanvas.height = canvas.height || 720;
-  if (particles.length === 0) initParticles(pw, ph);
-  updateParticles(pw, ph);
-
-  requestAnimationFrame(renderLoop);
-}
-
-requestAnimationFrame(renderLoop);
