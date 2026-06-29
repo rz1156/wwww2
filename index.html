@@ -3,61 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Vision | Hand Tracking</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <title>MediaPipe Hand Tracking - Cinematic Upgrade</title>
+
     <link rel="stylesheet" href="style.css">
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 </head>
+
 <body>
 
-    <div class="cursor-dot" id="cursor-dot"></div>
-    <div class="cursor-outline" id="cursor-outline"></div>
+<div class="camera-container" id="cameraContainer">
+    <video id="video" autoplay playsinline></video>
+    <div class="vignette"></div>
+    <canvas id="canvas"></canvas>
+</div>
 
-    <div class="noise-overlay"></div>
-    <div class="aurora-bg">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-    </div>
+<script src="script.js"></script>
 
-    <main class="app-container">
-        
-        <header class="header-section">
-            <h1 class="glitch-text" id="typewriter-title"></h1>
-            <p class="subtitle">Neural Hand Tracking Engine v2.0</p>
-        </header>
-
-        <div class="tilt-wrapper" id="tilt-wrapper">
-            <div class="glass-card camera-container">
-                
-                <div class="hud-corner top-left"></div>
-                <div class="hud-corner top-right"></div>
-                <div class="hud-corner bottom-left"></div>
-                <div class="hud-corner bottom-right"></div>
-
-                <video id="video" class="media-layer" autoplay playsinline></video>
-                <canvas id="canvas" class="media-layer"></canvas>
-                
-                <div class="scan-line"></div>
-                
-                <div class="status-badge">
-                    <span class="pulse-dot"></span> System Active
-                </div>
-            </div>
-        </div>
-
-        <div class="controls-section">
-            <button class="magnetic-btn" id="calibrate-btn">
-                <span class="btn-text">Calibrate Sensors</span>
-                <div class="btn-glow"></div>
-            </button>
-        </div>
-
-    </main>
-
-    <script src="script.js"></script>
 </body>
 </html>
