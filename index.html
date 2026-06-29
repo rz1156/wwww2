@@ -1,26 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediaPipe Hand Tracking - Cinematic Upgrade</title>
-
-    <link rel="stylesheet" href="style.css">
-
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cinematic Hand Tracking</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 </head>
-
 <body>
 
 <div class="camera-container" id="cameraContainer">
-    <video id="video" autoplay playsinline></video>
-    <div class="vignette"></div>
-    <canvas id="canvas"></canvas>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <!-- Vignette overlay -->
+  <div class="vignette" id="vignette"></div>
+
+  <!-- Cinematic bars -->
+  <div class="cinema-bar cinema-bar-top" id="barTop"></div>
+  <div class="cinema-bar cinema-bar-bottom" id="barBottom"></div>
+
+  <!-- HUD Overlay -->
+  <div class="hud" id="hud">
+    <div class="hud-ring"></div>
+    <div class="hud-ring hud-ring-2"></div>
+    <div class="hud-label" id="hudLabel">FOCUS MODE</div>
+    <div class="hud-sub" id="hudSub">DEPTH OF FIELD ACTIVE</div>
+    <div class="hud-corner hud-tl"></div>
+    <div class="hud-corner hud-tr"></div>
+    <div class="hud-corner hud-bl"></div>
+    <div class="hud-corner hud-br"></div>
+  </div>
+
+  <!-- Particle canvas -->
+  <canvas id="particleCanvas"></canvas>
 </div>
 
 <script src="script.js"></script>
-
 </body>
 </html>
